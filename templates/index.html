@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Live View</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 500px;
+            margin-bottom: 20px;
+        }
+        .drone-info, .search-drone, .log-table {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drone Live View</h1>
+
+    <!-- Search Drone Section -->
+    <div class="search-drone">
+        <h2>Search Drone by ID</h2>
+        <input type="text" id="search-id" placeholder="Enter Drone ID">
+        <button onclick="fetchDroneLogs()">Search</button>
+    </div>
+
+    <!-- Map Section -->
+    <div id="map"></div>
+
+    <!-- Drone Info Section -->
+    <div class="drone-info" id="drone-info">
+        <h3>Active Drones</h3>
+        <ul id="active-drones-list"></ul>
+    </div>
+
+    <!-- Drone Logs Section -->
+    <div>
+        <h2>Drone Logs</h2>
+        <table border="1" class="log-table" id="drone-logs">
+            <thead>
+                <tr>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Altitude</th>
+                    <th>Speed</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        let markers = {};
+
+        // Fetch active drones and update map
+        function fetchActiveDrones() {
+            fetch('/api/active_drones')
+                .then(response => response.json())
+                .then(drones => {
+                    const activeList = document.getElementById('active-drones-list');
+                    activeList.innerHTML = '';
+
+                    drones.forEach(drone => {
+                        const { id, latitude, longitude, altitude, speed } = drone;
+
+                        // Update map marker
+                        if (!markers[id]) {
+                            markers[id] = L.marker([latitude, longitude]).addTo(map)
+                                .bindPopup(`Drone ID: ${id}`);
+                        } else {
+                            markers[id].setLatLng([latitude, longitude]);
+                        }
+
+                        // Add drone to active list
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `Drone ID: ${id}, Latitude: ${latitude}, Longitude: ${longitude}`;
+                        activeList.appendChild(listItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching active drones:', error));
+        }
+
+        // Fetch logs for a specific drone
+        function fetchDroneLogs() {
+            const droneId = document.getElementById('search-id').value.trim();
+            if (!droneId) {
+                alert("Please enter a Drone ID.");
+                return;
+            }
+
+            fetch(`/api/drone_logs/${droneId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('drone-logs').querySelector('tbody');
+                    tbody.innerHTML = ''; // Clear existing rows
+                    if (!data.data || data.data.length === 0) {
+                        alert("No logs found for this drone.");
+                        return;
+                    }
+
+                    data.data.forEach(log => {
+                        const row = `<tr>
+                            <td>${log.latitude}</td>
+                            <td>${log.longitude}</td>
+                            <td>${log.altitude}</td>
+                            <td>${log.speed}</td>
+                            <td>${log.timestamp}</td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(error => console.error('Error fetching drone logs:', error));
+        }
+
+        // Update map every 3 seconds
+        setInterval(fetchActiveDrones, 3000);
+    </script>
+</body>
+</html>
