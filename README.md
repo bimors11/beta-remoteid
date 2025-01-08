@@ -6,7 +6,7 @@
 ---------------------------------------------------------------------------------------------------------------------------
 
 
-Fitur
+**Fitur**
   1. Monitoring Real-Time:
     - Menampilkan posisi drone yang sedang aktif di peta interaktif.
     - Memperbarui posisi drone secara berkala (setiap 3 detik).
@@ -21,7 +21,7 @@ Fitur
     - Memungkinkan pencarian drone berdasarkan ID untuk melihat log penerbangan sebelumnya.
 
 
-Komponen Sistem
+**Komponen Sistem**
 1. Server Database
     Menerima data telemetri drone melalui protokol MQTT.
     Menyimpan data ke dalam database SQLite.
@@ -30,25 +30,25 @@ Komponen Sistem
     Mengambil data dari server database menggunakan API HTTP.
     Menyediakan antarmuka berbasis web untuk menampilkan drone aktif dan log penerbangan.
    
-Library
+**Library**
 1. Flask: Framework untuk server web.
 2. Flask-SQLAlchemy: ORM untuk pengelolaan database.
 3. paho-mqtt: Untuk komunikasi dengan broker MQTT.
 4. requests: Untuk melakukan permintaan HTTP ke server API.
 
-Broker MQTT:
+**Broker MQTT:**
 1. Mosquitto (atau broker MQTT lain).
 
-Database:
+**Database:**
 1. SQLite (sudah terintegrasi dengan Python).
 
-Server Lokal:
+**Server Lokal:**
 1. Server database untuk menerima data telemetri melalui MQTT.
 1. Server livestream untuk menampilkan data real-time di web.
 
-Frontend:
+**Frontend:**
 HTML, CSS, dan Leaflet.js untuk peta interaktif pada antarmuka web.
 
-Alat Pendukung:
+**Alat Pendukung:**
 Mosquitto CLI untuk menguji pengiriman data MQTT.
 Browser untuk mengakses antarmuka web livestream.
