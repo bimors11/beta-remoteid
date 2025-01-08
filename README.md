@@ -1,19 +1,24 @@
-Drone Live Monitoring System
-Sistem ini dirancang untuk memonitor posisi drone secara real-time, melihat informasi detail drone, dan menampilkan log penerbangan sebelumnya. Sistem terdiri dari dua komponen utama: Server Database dan Server Livestream, yang bekerja bersama untuk menyediakan data drone secara real-time kepada pengguna.
+- **Database_Server.py** : Kode untuk Server Database
+- **Livestream_Server.py** : Kode Backend untuk Livestream Localhost
+- **templates/index.html** : Kode Frontend untuk Livestream
+- **remoteid.cpp** : Kode pada ESP32
+
+---------------------------------------------------------------------------------------------------------------------------
+
 
 Fitur
-  Monitoring Real-Time:
-  Menampilkan posisi drone yang sedang aktif di peta interaktif.
-  Memperbarui posisi drone secara berkala (setiap 3 detik).
+  1. Monitoring Real-Time:
+    - Menampilkan posisi drone yang sedang aktif di peta interaktif.
+    - Memperbarui posisi drone secara berkala (setiap 3 detik).
 
-Informasi Detail Drone:
-  Menampilkan data seperti ID drone, posisi GPS (latitude, longitude), ketinggian, dan kecepatan drone yang sedang terbang.
+ 2. Informasi Detail Drone:
+    - Menampilkan data seperti ID drone, posisi GPS (latitude, longitude), ketinggian, dan kecepatan drone yang sedang terbang.
 
-Log Penerbangan:
-  Menyediakan log lengkap penerbangan drone, termasuk posisi, ketinggian, kecepatan, dan waktu penerbangan.
+ 3. Log Penerbangan:
+    - Menyediakan log lengkap penerbangan drone, termasuk posisi, ketinggian, kecepatan, dan waktu penerbangan.
 
-Pencarian Drone:
-  Memungkinkan pencarian drone berdasarkan ID untuk melihat log penerbangan sebelumnya.
+ 4. Pencarian Drone:
+    - Memungkinkan pencarian drone berdasarkan ID untuk melihat log penerbangan sebelumnya.
 
 
 Komponen Sistem
