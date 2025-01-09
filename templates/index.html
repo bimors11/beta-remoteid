@@ -11,7 +11,7 @@
             height: 500px;
             margin-bottom: 20px;
         }
-        .drone-info, .search-drone, .log-table {
+        .drone-info {
             font-family: Arial, sans-serif;
             font-size: 14px;
             margin: 10px 0;
@@ -20,38 +20,10 @@
 </head>
 <body>
     <h1>Drone Live View</h1>
-
-    <!-- Search Drone Section -->
-    <div class="search-drone">
-        <h2>Search Drone by ID</h2>
-        <input type="text" id="search-id" placeholder="Enter Drone ID">
-        <button onclick="fetchDroneLogs()">Search</button>
-    </div>
-
-    <!-- Map Section -->
     <div id="map"></div>
-
-    <!-- Drone Info Section -->
     <div class="drone-info" id="drone-info">
-        <h3>Active Drones</h3>
-        <ul id="active-drones-list"></ul>
-    </div>
-
-    <!-- Drone Logs Section -->
-    <div>
-        <h2>Drone Logs</h2>
-        <table border="1" class="log-table" id="drone-logs">
-            <thead>
-                <tr>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
-                    <th>Altitude</th>
-                    <th>Speed</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <h3>Drone Details</h3>
+        <p id="details">Click on a drone to see details.</p>
     </div>
 
     <script>
@@ -61,63 +33,57 @@
         }).addTo(map);
 
         let markers = {};
+        let flightPaths = {};
 
         // Fetch active drones and update map
         function fetchActiveDrones() {
             fetch('/api/active_drones')
                 .then(response => response.json())
                 .then(drones => {
-                    const activeList = document.getElementById('active-drones-list');
-                    activeList.innerHTML = '';
-
                     drones.forEach(drone => {
-                        const { id, latitude, longitude, altitude, speed } = drone;
+                        const { id, latitude, longitude } = drone;
 
                         // Update map marker
                         if (!markers[id]) {
-                            markers[id] = L.marker([latitude, longitude]).addTo(map)
+                            const marker = L.marker([latitude, longitude]).addTo(map)
                                 .bindPopup(`Drone ID: ${id}`);
+                            marker.on('click', () => showDroneDetails(id)); // Show details on click
+                            markers[id] = marker;
                         } else {
                             markers[id].setLatLng([latitude, longitude]);
                         }
-
-                        // Add drone to active list
-                        const listItem = document.createElement('li');
-                        listItem.textContent = `Drone ID: ${id}, Latitude: ${latitude}, Longitude: ${longitude}`;
-                        activeList.appendChild(listItem);
                     });
                 })
                 .catch(error => console.error('Error fetching active drones:', error));
         }
 
-        // Fetch logs for a specific drone
-        function fetchDroneLogs() {
-            const droneId = document.getElementById('search-id').value.trim();
-            if (!droneId) {
-                alert("Please enter a Drone ID.");
-                return;
-            }
-
+        // Show details and flight path for a specific drone
+        function showDroneDetails(droneId) {
             fetch(`/api/drone_logs/${droneId}`)
                 .then(response => response.json())
                 .then(data => {
-                    const tbody = document.getElementById('drone-logs').querySelector('tbody');
-                    tbody.innerHTML = ''; // Clear existing rows
-                    if (!data.data || data.data.length === 0) {
-                        alert("No logs found for this drone.");
-                        return;
-                    }
+                    // Update details
+                    const details = document.getElementById('details');
+                    if (data.data.length > 0) {
+                        const latest = data.data[data.data.length - 1];
+                        details.innerHTML = `
+                            <b>ID:</b> ${droneId}<br>
+                            <b>Latitude:</b> ${latest.latitude}<br>
+                            <b>Longitude:</b> ${latest.longitude}<br>
+                            <b>Altitude:</b> ${latest.altitude} m<br>
+                            <b>Speed:</b> ${latest.speed} m/s<br>
+                        `;
 
-                    data.data.forEach(log => {
-                        const row = `<tr>
-                            <td>${log.latitude}</td>
-                            <td>${log.longitude}</td>
-                            <td>${log.altitude}</td>
-                            <td>${log.speed}</td>
-                            <td>${log.timestamp}</td>
-                        </tr>`;
-                        tbody.innerHTML += row;
-                    });
+                        // Draw flight path
+                        if (flightPaths[droneId]) {
+                            map.removeLayer(flightPaths[droneId]);
+                        }
+
+                        const path = data.data.map(d => [d.latitude, d.longitude]);
+                        flightPaths[droneId] = L.polyline(path, { color: 'red' }).addTo(map);
+                    } else {
+                        details.innerHTML = "No data available for this drone.";
+                    }
                 })
                 .catch(error => console.error('Error fetching drone logs:', error));
         }
