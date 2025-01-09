@@ -43,7 +43,6 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        # Parse the incoming JSON message
         data = json.loads(msg.payload.decode())
         drone_id = data.get('id')
         latitude = data.get('latitude')
@@ -52,29 +51,31 @@ def on_message(client, userdata, msg):
         barometer_altitude = data.get('barometer_altitude')
         speed = data.get('speed')
 
-        # Find or create the drone
-        drone = Drone.query.filter_by(drone_id=drone_id).first()
-        if not drone:
-            drone = Drone(drone_id=drone_id, status="active")  # Status aktif untuk drone baru
-            db.session.add(drone)
-        else:
-            drone.status = "active"  # Perbarui status menjadi aktif
+        with app.app_context():  # Tambahkan konteks aplikasi Flask
+            # Find or create the drone
+            drone = Drone.query.filter_by(drone_id=drone_id).first()
+            if not drone:
+                drone = Drone(drone_id=drone_id, status="active")
+                db.session.add(drone)
+            else:
+                drone.status = "active"
 
-        # Store telemetry data
-        telemetry = DroneData(
-            latitude=latitude,
-            longitude=longitude,
-            altitude=altitude,
-            barometer_altitude=barometer_altitude,
-            speed=speed,
-            drone=drone
-        )
-        db.session.add(telemetry)
-        db.session.commit()
+            # Store telemetry data
+            telemetry = DroneData(
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude,
+                barometer_altitude=barometer_altitude,
+                speed=speed,
+                drone=drone
+            )
+            db.session.add(telemetry)
+            db.session.commit()
 
-        print(f"Data saved: {data}")
+            print(f"Data saved: {data}")
     except Exception as e:
         print(f"Error processing message: {e}")
+
 
 # Fungsi untuk menonaktifkan drone yang tidak aktif
 def deactivate_inactive_drones():
