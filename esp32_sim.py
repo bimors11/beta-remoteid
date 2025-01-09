@@ -4,9 +4,9 @@ import math
 import json
 
 # Konfigurasi MQTT
-BROKER = "localhost"  # Alamat broker MQTT
+BROKER = "192.168.1.93"  # Alamat broker MQTT di server
 TOPIC = "drone/telemetry"  # Topik untuk mengirim data
-DRONE_ID = "drone1"  # ID drone
+DRONE_ID = "drone3"  # ID drone
 
 # Konfigurasi jalur lingkaran
 CENTER_LAT = -6.200  # Latitude pusat lingkaran
