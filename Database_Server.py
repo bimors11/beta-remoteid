@@ -84,7 +84,7 @@ def deactivate_inactive_drones():
     """
     while True:
         with app.app_context():
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.timezone.utc)
             drones = Drone.query.all()
             for drone in drones:
                 # Ambil data terbaru drone
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     thread.start()
 
     # Start MQTT client
-    mqtt_client = mqtt.Client()
+    mqtt_client = mqtt.Client(protocol=mqtt.MQTTv311)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
