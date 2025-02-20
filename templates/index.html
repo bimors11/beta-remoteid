@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Live View</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            margin: 20px 0;
+            color: #333;
+        }
+
+        #search-container {
+            position: relative;
+        }
+
+        #search-bar {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .search-results {
+            list-style: none;
+            padding: 0;
+            width: 300px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            z-index: 1500;
+            display: none;
+        }
+
+        .search-results li {
+            cursor: pointer;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .search-results li:hover {
+            background-color: #f0f0f0;
+        }
+
+        #map {
+            height: 500px;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        /* Sliding Info Panel - Selalu di atas peta */
+        .info-panel {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 300px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            transition: right 0.3s ease-in-out;
+            z-index: 2000;
+        }
+
+        .info-panel.active {
+            right: 0;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drone Live View</h1>
+    <div id="search-container">
+        <input type="text" id="search-bar" placeholder="Search by drone ID or pilot name..." autocomplete="off">
+        <ul id="search-results" class="search-results"></ul>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Sliding Info Panel -->
+    <div id="infoPanel" class="info-panel">
+        <span class="close-btn" onclick="closePanel()">&times;</span>
+        <h3>Drone Details</h3>
+        <p id="details">Click on a drone to see details.</p>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        }).addTo(map);
+
+
+        let markers = {};
+        let flightPaths = {};
+        let selectedDroneId = null;
+        let activeDrones = new Set();
+
+        function fetchActiveDrones() {
+            fetch('/api/active_drones')
+                .then(response => response.json())
+                .then(drones => {
+                    let newActiveDrones = new Set();
+
+                    drones.forEach(drone => {
+                        const { id, latitude, longitude, pilot } = drone;
+                        newActiveDrones.add(id);
+
+                        // Buat icon drone custom
+                        const droneIcon = L.icon({
+                            iconUrl: 'static/droneview.png',  // Pastikan path sesuai
+                            iconSize: [40, 40],  
+                            iconAnchor: [20, 20],  
+                            popupAnchor: [0, -20]  
+                        });
+
+                        if (!markers[id]) {
+                            const marker = L.marker([latitude, longitude], { icon: droneIcon }).addTo(map)
+                                .bindPopup(`Drone ID: ${id}<br>Pilot: ${pilot}`);
+                            marker.on('click', (e) => {
+                                showDroneDetails(id);
+                                e.originalEvent.stopPropagation();
+                            });
+                            markers[id] = marker;
+                        } else {
+                            markers[id].setLatLng([latitude, longitude]);
+                        }
+
+                        if (id === selectedDroneId) {
+                            updateDroneDetails(id);
+                        }
+                    });
+
+                    // Hapus drone yang tidak aktif dari peta
+                    Object.keys(markers).forEach(id => {
+                        if (!newActiveDrones.has(id)) {
+                            map.removeLayer(markers[id]);
+                            delete markers[id];
+                        }
+                    });
+
+                    activeDrones = newActiveDrones;
+                })
+                .catch(error => console.error('Error fetching active drones:', error));
+        }
+
+
+        function showDroneDetails(droneId) {
+            selectedDroneId = droneId;
+            updateDroneDetails(droneId);
+            document.getElementById('infoPanel').classList.add('active');
+        }
+
+        function updateDroneDetails(droneId) {
+            fetch(`/api/drone_logs/${droneId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const details = document.getElementById('details');
+                    if (data.history.length > 0) {
+                        const latestSession = data.history[data.history.length - 1];
+                        const latest = latestSession.data[latestSession.data.length - 1];
+                        details.innerHTML = `
+                            <b>ID:</b> ${droneId}<br>
+                            <b>Latitude:</b> ${latest.latitude}<br>
+                            <b>Longitude:</b> ${latest.longitude}<br>
+                            <b>Altitude:</b> ${latest.altitude} m<br>
+                            <b>Speed:</b> ${latest.speed} m/s<br>
+                            <b>Start Time:</b> ${latestSession.start_time}<br>
+                            <b>End Time:</b> ${latestSession.end_time || "In Flight"}<br>
+                        `;
+
+                        if (flightPaths[droneId]) {
+                            map.removeLayer(flightPaths[droneId]);
+                        }
+
+                        const path = latestSession.data.map(d => [d.latitude, d.longitude]);
+                        flightPaths[droneId] = L.polyline(path, { color: 'red' }).addTo(map);
+                    }
+                })
+                .catch(error => console.error('Error fetching drone logs:', error));
+        }
+
+        function closePanel() {
+            document.getElementById('infoPanel').classList.remove('active');
+            removeFlightPath();
+        }
+
+        function removeFlightPath() {
+            if (selectedDroneId && flightPaths[selectedDroneId]) {
+                map.removeLayer(flightPaths[selectedDroneId]);
+                delete flightPaths[selectedDroneId];
+                selectedDroneId = null;
+            }
+        }
+
+        function searchDrones(query) {
+            const resultList = document.getElementById('search-results');
+
+            if (!query) {
+                resultList.innerHTML = '';
+                resultList.style.display = 'none';
+                return;
+            }
+
+            fetch(`/api/search?q=${query}`)
+                .then(response => response.json())
+                .then(results => {
+                    resultList.innerHTML = '';
+                    resultList.style.display = 'block';
+
+                    results.forEach(drone => {
+                        const item = document.createElement('li');
+                        item.textContent = `Drone: ${drone.drone_id} (Pilot: ${drone.pilot}) - ${drone.status}`;
+                        item.onclick = () => {
+                            showDroneDetails(drone.drone_id);
+                            resultList.style.display = 'none';
+                        };
+                        resultList.appendChild(item);
+                    });
+                })
+                .catch(error => console.error('Error searching drones:', error));
+        }
+
+        document.getElementById('search-bar').addEventListener('input', (event) => {
+            searchDrones(event.target.value);
+        });
+
+        document.getElementById('search-bar').addEventListener('blur', () => {
+            setTimeout(() => {
+                document.getElementById('search-results').style.display = 'none';
+            }, 200);
+        });
+
+        map.on('click', () => {
+            closePanel();
+        });
+
+        setInterval(fetchActiveDrones, 3000);
+    </script>
+</body>
+</html>
